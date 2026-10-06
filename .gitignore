@@ -16,3 +16,4 @@ venv/
 vendor/
 离线安装.bat
 exclude.txt
+上传到GitHub.bat

@@ -455,17 +455,13 @@ class WeChatMonitor:
                 # 检查是否是刚刚发送的消息（防止循环）
                 content = parsed_msg.get('content', '')
                 raw = parsed_msg.get('raw_message')
-                # ① 优先按「消息方向」精确判断（wechatauto 提供 is_self）
-                if raw is not None and hasattr(raw, 'is_self'):
-                    try:
-                        report_self = bool(self.config_manager.get('wechat.report_self', False))
-                    except Exception:
-                        report_self = False
-                    if bool(getattr(raw, 'is_self', False)) and not report_self:
-                        logger.info(f"⏭️  跳过自己发送的消息(is_self): {content[:30]}{'...' if len(content) > 30 else ''}")
-                        return
-                # ② 回退：老式「内容匹配」防循环
-                elif self._is_recently_sent_message(content):
+                # 判断是不是"机器人自己刚发出去的消息"（防循环）
+                #
+                # 注意：不能用 is_self 来判断！
+                #   用户在自己账号上发消息   → is_self = True  ← 这种必须处理
+                #   机器人自己回的消息回显   → is_self = True  ← 这种才要丢
+                # 两者 is_self 一样，只能靠"内容匹配"区分。
+                if self._is_recently_sent_message(content):
                     logger.info(f"⏭️  跳过回显消息: {content[:30]}{'...' if len(content) > 30 else ''}")
                     return
                     
