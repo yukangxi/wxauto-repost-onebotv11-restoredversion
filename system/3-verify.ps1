@@ -6,6 +6,83 @@
         powershell -ExecutionPolicy Bypass -File 3-verify.ps1
 #>
 $ErrorActionPreference = "Continue"
+# ---- 自举：如果执行策略禁止运行脚本，自动用 Bypass 重跑 ----
+if (-not $env:WXREPOST_BYPASSED) {
+    $blocked = $false
+    try { $null = Get-ExecutionPolicy -Scope CurrentUser } catch {}
+    if ((Get-ExecutionPolicy) -in @("Restricted","AllSigned")) {
+        $blocked = $true
+    }
+    if ($blocked) {
+        $env:WXREPOST_BYPASSED = "1"
+        Start-Process powershell -ArgumentList @("-NoProfile","-ExecutionPolicy","Bypass","-File","`"$PSCommandPath`"")
+        exit
+    }
+    $env:WXREPOST_BYPASSED = "1"
+}
+
+
+
+# ============================================================
+#  渲染检测：纯 PowerShell，不依赖 python
+#  原理：抓屏幕一小块，看有没有"多种颜色"
+#        纯色 = 没渲染；有杂色 = 在渲染
+# ============================================================
+function Test-ScreenRendered {
+    try {
+        Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+
+        $vs = [System.Windows.Forms.SystemInformation]::VirtualScreen
+        if ($vs.Width -le 0 -or $vs.Height -le 0) { return $false }
+
+        # 抓中间 200x200 的一小块
+        $w = [Math]::Min(200, $vs.Width)
+        $h = [Math]::Min(200, $vs.Height)
+        $x = [int](($vs.Width - $w) / 2)
+        $y = [int](($vs.Height - $h) / 2)
+
+        $bmp = New-Object System.Drawing.Bitmap $w, $h
+        $g   = [System.Drawing.Graphics]::FromImage($bmp)
+        $g.CopyFromScreen($vs.X + $x, $vs.Y + $y, 0, 0, $bmp.Size)
+        $g.Dispose()
+
+        $colors = @{}
+        for ($i = 0; $i -lt $w; $i += 10) {
+            for ($j = 0; $j -lt $h; $j += 10) {
+                $c = $bmp.GetPixel($i, $j)
+                $key = "$($c.R),$($c.G),$($c.B)"
+                $colors[$key] = 1
+                if ($colors.Count -gt 5) { $bmp.Dispose(); return $true }
+            }
+        }
+        $bmp.Dispose()
+        return ($colors.Count -gt 1)
+    } catch {
+        return $false
+    }
+}
+
+# 找 python（兜底用，某些脚本需要）
+function Find-PythonExe {
+    $c = Get-Command python -ErrorAction SilentlyContinue
+    if ($c -and $c.Source -and $c.Source -notlike "*WindowsApps*") { return $c.Source }
+    $pats = @(
+        "$env:USERPROFILE\.astrbot_launcher\instances\*\venv\Scripts\python.exe",
+        "$env:USERPROFILE\.astrbot_launcher\components\python\*\python.exe",
+        "C:\Users\*\.astrbot_launcher\instances\*\venv\Scripts\python.exe",
+        "C:\Users\*\.astrbot_launcher\components\python\*\python.exe",
+        "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
+        "C:\Python*\python.exe",
+        "C:\Program Files\Python*\python.exe"
+    )
+    foreach ($p in $pats) {
+        $hit = Get-ChildItem $p -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($hit) { return $hit.FullName }
+    }
+    return $null
+}
+
 $pass = 0; $fail = 0
 function Chk($name, $ok, $detail) {
     if ($ok) { Write-Host "  [OK]   $name  $detail" -ForegroundColor Green; $script:pass++ }
@@ -36,20 +113,10 @@ Chk "虚拟显示器已安装" $hasVdd "(不装的话断开远程桌面就会瞎
 # 3 屏幕渲染
 Write-Host ""
 Write-Host "[3] 桌面渲染（最关键）"
-$py = Get-Command python -ErrorAction SilentlyContinue
-if ($py) {
-    $code = "from PIL import ImageGrab`nimport sys`ntry:`n    i=ImageGrab.grab();e=i.convert('L').getextrema()`n    print(i.size, e)`n    sys.exit(0 if e[0]!=e[1] else 2)`nexcept Exception as ex:`n    print(ex); sys.exit(3)"
-    $r = python -c $code 2>&1
-    $rc = $LASTEXITCODE
-    if ($rc -eq 0)      { Chk "能截到屏（桌面在渲染）" $true  "$r" }
-    elseif ($rc -eq 2)  { Chk "能截到屏（桌面在渲染）" $false "纯色画面，可能桌面没在渲染" }
-    else                { Chk "能截到屏（桌面在渲染）" $false "$r   <-- 这就是发不出消息的原因" }
-} else {
-    Write-Host "     (跳过: 找不到 python)"
-}
+$rendered = Test-ScreenRendered
+$vs = [System.Windows.Forms.SystemInformation]::VirtualScreen
+Chk "能截到屏（桌面在渲染）" $rendered ("屏幕 " + $vs.Width + "x" + $vs.Height)
 
-# 4 计划任务
-Write-Host ""
 Write-Host "[4] 会话保活"
 $daemon = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
             Where-Object { $_.CommandLine -match "keep_console_loop" })
@@ -71,11 +138,13 @@ if ($wx) { Write-Host "     会话 ID: $(($wx | Select-Object -First 1).SessionI
 # 6 发送实测
 Write-Host ""
 Write-Host "[6] 发送实测（发到「文件传输助手」）"
+$py = Find-PythonExe
 if ($py) {
+    Write-Host "     python: $py"
     $code2 = "from wechatauto import WeChat`nprint(WeChat().SendMsg('自检消息', who='文件传输助手'))"
     # 用 UTF-8 拿输出，避免中文乱码误判
     try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
-    $r2 = (python -c $code2 2>&1 | Out-String)
+    $r2 = (& $py -c $code2 2>&1 | Out-String)
 
     # 判定只看两件 ASCII 事实：
     #   1) 有没有 'status'  —— 有说明真的拿到了 WxResponse

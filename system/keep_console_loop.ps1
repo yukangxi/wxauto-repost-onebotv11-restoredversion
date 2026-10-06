@@ -17,7 +17,7 @@
 param([int]$IntervalSec = 20, [switch]$Quiet)
 
 $LOG   = "C:\VirtualDisplayDriver\keep_console.log"
-$DEV   = "ROOT\MTTVDD\0000"
+$DEVICE_ID   = "ROOT\MTTVDD\0000"
 $LOCK  = "C:\VirtualDisplayDriver\keep_console.lock"
 
 # 单实例保护
@@ -64,18 +64,18 @@ $lastSid = $null
 while ($true) {
     try {
         # 设备被禁用？
-        $d = Get-PnpDevice -InstanceId $DEV -ErrorAction SilentlyContinue
+        $d = Get-PnpDevice -InstanceId $DEVICE_ID -ErrorAction SilentlyContinue
         if ($d -and $d.Status -ne "OK") {
             W "设备异常($($d.Status)) -> 启用"
-            Enable-PnpDevice -InstanceId $DEV -Confirm:$false -ErrorAction SilentlyContinue
+            Enable-PnpDevice -InstanceId $DEVICE_ID -Confirm:$false -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 2
         }
 
         $sid = Get-BotSession
         if ($sid) {
             $state = Get-SessionState $sid
-            $dev  = Get-PnpDevice -InstanceId $DEV -ErrorAction SilentlyContinue
-            $devS = if ($dev) { $dev.Status } else { "缺失" }
+            $devInfo  = Get-PnpDevice -InstanceId $DEVICE_ID -ErrorAction SilentlyContinue
+            $devS = if ($devInfo) { $devInfo.Status } else { "缺失" }
 
             if ($state -ne "ACTIVE") {
                 W "检查: 会话=$sid 状态=$state 设备=$devS  -> 修复中(tscon)"
