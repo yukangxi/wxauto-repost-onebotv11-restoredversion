@@ -255,7 +255,8 @@ function Menu {
         Write-Host "   [5] 安装（首次使用）"
         Write-Host "   [6] 卸载"
         Write-Host "   [7] 自检（6 项）"
-        Write-Host "   [8] 注册 / 卸载保活任务"
+        Write-Host "   [8] 保活：安装/卸载自启动守护"
+        Write-Host "       (推荐 —— 不依赖任务计划程序)"
         Write-Host "   [9] 安全断开远程桌面"
         Write-Host "   [0] 退出"
         Line "-" 50
@@ -269,8 +270,11 @@ function Menu {
             "6" { Do-Uninstall; Read-Host "  回车继续" | Out-Null }
             "7" { Do-Check;   Read-Host "  回车继续" | Out-Null }
             "8" {
-                $m = Read-Host "  on=注册  off=卸载"
-                if ($m -eq "on" -or $m -eq "off") { Do-Task $m } else { Info "无效输入" }
+                $m = Read-Host "  on=安装自启动守护  off=卸载"
+                $script = Find-Sibling "4-install-autostart.ps1"
+                if (-not $script) { Bad "找不到 4-install-autostart.ps1"; Read-Host "  回车继续" | Out-Null; continue }
+                if ($m -eq "off") { & powershell -NoProfile -ExecutionPolicy Bypass -File $script -Uninstall }
+                else              { & powershell -NoProfile -ExecutionPolicy Bypass -File $script }
                 Read-Host "  回车继续" | Out-Null
             }
             "9" {

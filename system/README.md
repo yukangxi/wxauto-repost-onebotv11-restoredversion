@@ -219,3 +219,48 @@ schtasks /create /tn "KeepConsoleSession" /f ^
 ```
 
 关键在 `/ru <你> /rl HIGHEST /it` —— **`/it` 表示"仅交互式"**，这样它才能操作桌面会话。
+
+
+---
+
+## ⚠️ 重要更正：不要用计划任务，用常驻守护
+
+**实测发现**：某些 Windows 机器上**任务计划程序完全无法执行任务** ——
+`SYSTEM` / `S4U` / `交互式` 三种登录类型全试过，任务状态显示 `Queued`、`上次结果 0`，
+**但脚本一行都没跑**（用"写标记文件"的方式验证过，标记文件从不生成）。
+
+**所以保活改用常驻进程 + 启动文件夹：**
+
+```powershell
+cd system
+powershell -ExecutionPolicy Bypass -File 4-install-autostart.ps1
+```
+
+**它做三件事：**
+
+1. 部署 `keep_console_loop.ps1` 到 `C:\VirtualDisplayDriver\`
+2. **立刻启动**一个隐藏窗口的守护进程（每 60 秒检查一次）
+3. 在"启动"文件夹放一个快捷方式 → **开机/登录自动起**
+
+**卸载：**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File 4-install-autostart.ps1 -Uninstall
+```
+
+**优点：**
+
+- 不依赖任务计划程序 ✅
+- 跑在你的会话里 → `tscon` 有效 ✅
+- 断开远程桌面后继续跑 ✅
+- 重启后自动恢复 ✅
+
+**代价**：一个常驻 powershell 进程（约 30 MB 内存）
+
+### 为什么计划任务会失败
+
+系统层面的原因不明（可能是策略或环境差异）。
+**对使用者来说不重要 —— 用守护进程就绕过去了。**
+
+（`2-register-task.ps1` 保留着，在任务计划程序正常的机器上仍然可用，
+  但它不是推荐方式。）
