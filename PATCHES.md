@@ -1,6 +1,26 @@
 # 改动清单（原版 v1.2.0 → 本版）
 
-共 **12 处**。每处给出：文件 / 原因 / 改法。
+**共 12 处。** 每处给出：**文件 / 原因 / 改法**。
+
+**相关**：[README](README.md) · [接口文档](API.md)
+
+---
+
+## 目录
+
+1. [依赖换库：wxauto → wechatauto-replica](#1-2-依赖换库wxauto--wechatauto-replica)
+2. （同 1，含 metadata 与 requirements）
+3. [窗口类名适配微信 4.x](#3-窗口类名适配微信-4x)
+4. [补齐合并转发接口](#4-补齐合并转发接口)
+5. [群消息改走发送链路](#5-群消息改走发送链路)
+6. [X-Self-ID 一致性](#6-x-self-id-一致性关键)
+7. [user_id 类型比较](#7-user_id-类型比较关键)
+8. [监听方式：AddListenAll + 双路](#8-监听方式addlistenchat--addlistenall--双路)
+9. [收消息去重](#9-收消息去重)
+10. [清洗「发送者wxid:」前缀](#10-清洗内容里的发送者wxid前缀关键)
+11. [微信窗口自动归位](#11-微信窗口自动归位)
+12. [send_msg(group) 对齐](#12-send_msggroup-与-send_group_msg-对齐)
+13. [附：非代码层的两件事](#附非代码层的两件事)
 
 ---
 
