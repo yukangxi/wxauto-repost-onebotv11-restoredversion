@@ -11,3 +11,8 @@ venv/
 .venv/
 .idea/
 .vscode/
+
+# 依赖包（181 MB）—— 不进 git，走 Release 分发
+vendor/
+离线安装.bat
+exclude.txt

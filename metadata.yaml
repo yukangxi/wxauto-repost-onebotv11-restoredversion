@@ -1,9 +1,11 @@
 # AstrBot插件元数据
 name: "wxauto_repost"
 author: "汐灿"
+desc: "[wechatauto 适配版] 微信消息转发框架插件 - 基于wxauto库和OneBotV11协议，支持微信消息与OneBotV11协议的双向转发"                # ★ AstrBot 必填字段
 description: "[wechatauto 适配版] 微信消息转发框架插件 - 基于wxauto库和OneBotV11协议，支持微信消息与OneBotV11协议的双向转发"
 version: "1.2.0-wechatauto.1"
-repo: "https://github.com/luosheng520qaq/wxauto-repost-onebotv11"
+repo: "https://github.com/yukangxi/wxauto-repost-onebotv11-restoredversion"
+# 上游原仓库：https://github.com/luosheng520qaq/wxauto-repost-onebotv11
 
 # 插件依赖
 dependencies:

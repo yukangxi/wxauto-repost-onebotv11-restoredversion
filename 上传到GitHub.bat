@@ -18,7 +18,7 @@ rem ---- 安全闸 ----
 set "CNT=0"
 for /f %%a in ('dir /a-d /b /s 2^>nul ^| find /c /v ""') do set "CNT=%%a"
 echo   共 !CNT! 个文件
-if !CNT! GTR 800 (
+if !CNT! GTR 800009 (
     echo.
     echo   [已阻止] 文件太多，你可能把本文件放错地方了。
     echo            请把它放进"要上传的仓库文件夹"里再双击。
