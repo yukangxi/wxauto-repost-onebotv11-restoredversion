@@ -14,7 +14,7 @@
     停止方式: 删掉启动文件夹里的快捷方式，并结束进程
               或跑 4-install-autostart.ps1 -Uninstall
 #>
-param([int]$IntervalSec = 20, [switch]$Quiet)
+param([int]$IntervalSec = 10, [switch]$Quiet)
 
 $LOG   = "C:\VirtualDisplayDriver\keep_console.log"
 $DEVICE_ID   = "ROOT\MTTVDD\0000"
@@ -36,6 +36,26 @@ function W($m) {
         $all = Get-Content $LOG -ErrorAction SilentlyContinue
         if ($all.Count -gt 300) { $all | Select-Object -Last 150 | Set-Content $LOG -Encoding UTF8 }
     } catch { }
+}
+
+
+# 渲染检测（纯 PowerShell，不依赖 python）
+function Test-ScreenRendered {
+    try {
+        Add-Type -AssemblyName System.Drawing -ErrorAction SilentlyContinue
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction SilentlyContinue
+        $vs = [System.Windows.Forms.SystemInformation]::VirtualScreen
+        if ($vs.Width -le 0) { return $false }
+        $w = [Math]::Min(200, $vs.Width); $h = [Math]::Min(200, $vs.Height)
+        $bmp = New-Object System.Drawing.Bitmap $w, $h
+        $g = [System.Drawing.Graphics]::FromImage($bmp)
+        $g.CopyFromScreen(0, 0, 0, 0, $bmp.Size)
+        $g.Dispose()
+        $colors = @{}
+        for ($i=0; $i -lt $w; $i+=10) { for ($j=0; $j -lt $h; $j+=10) { $c=$bmp.GetPixel($i,$j); $colors["$($c.R),$($c.G),$($c.B)"]=1; if ($colors.Count -gt 5) { $bmp.Dispose(); return $true } } }
+        $bmp.Dispose()
+        return ($colors.Count -gt 1)
+    } catch { return $false }
 }
 
 function Get-BotSession {
@@ -77,14 +97,17 @@ while ($true) {
             $devInfo  = Get-PnpDevice -InstanceId $DEVICE_ID -ErrorAction SilentlyContinue
             $devS = if ($devInfo) { $devInfo.Status } else { "缺失" }
 
-            if ($state -ne "ACTIVE") {
-                W "检查: 会话=$sid 状态=$state 设备=$devS  -> 修复中(tscon)"
+            $rendered = $true
+            if ($state -eq "ACTIVE") { $rendered = Test-ScreenRendered }
+
+            if ($state -ne "ACTIVE" -or -not $rendered) {
+                W "检查: 会话=$sid 状态=$state 渲染=$rendered 设备=$devS  -> 修复中(tscon)"
                 & tscon $sid /dest:console 2>&1 | Out-Null
                 Start-Sleep -Seconds 3
                 W "修复完成: 状态=$(Get-SessionState $sid)"
             } else {
                 # 正常也记一笔（可调 -Quiet 关掉）
-                if (-not $Quiet) { W "检查: 会话=$sid 状态=$state 设备=$devS  -> 正常" }
+                if (-not $Quiet) { W "检查: 会话=$sid 状态=$state 渲染=$rendered 设备=$devS  -> 正常" }
             }
             $lastSid = $sid
         } else {
