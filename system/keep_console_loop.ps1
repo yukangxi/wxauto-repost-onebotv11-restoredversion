@@ -20,14 +20,15 @@ $LOG   = "C:\VirtualDisplayDriver\keep_console.log"
 $DEVICE_ID   = "ROOT\MTTVDD\0000"
 $LOCK  = "C:\VirtualDisplayDriver\keep_console.lock"
 
-# 单实例保护
-if (Test-Path $LOCK) {
-    $oldPid = (Get-Content $LOCK -ErrorAction SilentlyContinue | Select-Object -First 1)
-    if ($oldPid -and (Get-Process -Id $oldPid -ErrorAction SilentlyContinue)) {
-        exit 0     # 已经有一个在跑了
+# 单实例保护（自杀式：启动时把别的同类进程杀掉，只留自己）
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match "keep_console_loop" -and $_.ProcessId -ne $PID } |
+    ForEach-Object {
+        try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch { }
     }
-}
+Start-Sleep -Milliseconds 500
 $PID | Out-File $LOCK -Encoding ASCII
+
 
 function W($m) {
     try {
