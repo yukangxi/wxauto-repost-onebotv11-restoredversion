@@ -33,6 +33,64 @@
 
 ---
 
+---
+
+## 支持的系统与环境
+
+### 硬性要求
+
+| 项目 | 要求 | 说明 |
+|---|---|---|
+| **操作系统** | **Windows 10 / 11（x64）** | ❌ **不支持 Linux / macOS / Android** |
+| **微信** | **PC 版 4.1.12 及以上** | 实测 4.1.15.13 ✅；**3.9 已不可用**（官方强制升级拦截） |
+| **CPU** | **x64（AMD64）** | ARM64 未测试 |
+| **AstrBot** | **≥ 3.0.0** | |
+| **Python** | **3.10+** | 实测 3.12.14 |
+| **网络** | 能访问互联网（插件本体） | 国内访问 GitHub 可能不稳定 |
+
+### 为什么只支持 Windows
+
+底层 `wechatauto` 依赖 **Windows UI 自动化**：
+
+```
+src/window_controller.py   win32gui / win32con        ← 纯 Windows API
+src/wechat_monitor.py      pythoncom / ctypes.windll / user32
+requirements.txt           pywin32                    ← Windows 专用包
+```
+
+微信 PC 版本身也只有 Windows / macOS 版本，而本项目走的是 **Windows 客户端自动化**。
+
+### ⚠️ 最容易被忽略的门槛：桌面
+
+**微信 PC 版的「发送」要靠屏幕截图定位输入框。所以必须有一个"正在渲染"的桌面。**
+
+| 场景 | 能否收发 |
+|---|---|
+| 连着远程桌面（会话"运行中"） | ✅ 可以 |
+| 断开远程桌面（会话"断开"） | ❌ **发不出去**（截屏失败） |
+| 无头服务器 / 没有显示器 | ❌ **必须有虚拟显示器** |
+
+**解决方案见 [`system/README.md`](system/README.md)**：
+
+1. **虚拟显示器驱动**（`vdd_settings.xml`）—— 让系统有一块不跟 RDP 走的屏
+2. **会话保活计划任务**（`keep_console.ps1`）—— 每分钟把掉回「断开」的会话推回控制台
+3. **安全断开工具**（`safedisconnect.bat`）—— 主动断开时用它，别点右上角 ×
+
+### 依赖
+
+```
+wechatauto-replica>=1.2.4     底层（微信 4.1.12+ 自动化）
+flask>=2.3.0
+flask-cors>=4.0.0
+websocket-client>=1.6.0
+requests>=2.31.0
+pywin32>=306                  Windows API 绑定
+```
+
+`astrbot` 框架、`psutil`、`pillow` 等由 AstrBot 自带，无需声明。
+
+---
+
 ## 快速开始
 
 ```bash
