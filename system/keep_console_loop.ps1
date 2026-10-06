@@ -14,7 +14,7 @@
     停止方式: 删掉启动文件夹里的快捷方式，并结束进程
               或跑 4-install-autostart.ps1 -Uninstall
 #>
-param([int]$IntervalSec = 60)
+param([int]$IntervalSec = 20, [switch]$Quiet)
 
 $LOG   = "C:\VirtualDisplayDriver\keep_console.log"
 $DEV   = "ROOT\MTTVDD\0000"
@@ -74,13 +74,21 @@ while ($true) {
         $sid = Get-BotSession
         if ($sid) {
             $state = Get-SessionState $sid
+            $dev  = Get-PnpDevice -InstanceId $DEV -ErrorAction SilentlyContinue
+            $devS = if ($dev) { $dev.Status } else { "缺失" }
+
             if ($state -ne "ACTIVE") {
-                W "会话 $sid 状态=($state) -> tscon $sid /dest:console"
+                W "检查: 会话=$sid 状态=$state 设备=$devS  -> 修复中(tscon)"
                 & tscon $sid /dest:console 2>&1 | Out-Null
                 Start-Sleep -Seconds 3
-                W "处理完成: 状态=$(Get-SessionState $sid)"
+                W "修复完成: 状态=$(Get-SessionState $sid)"
+            } else {
+                # 正常也记一笔（可调 -Quiet 关掉）
+                if (-not $Quiet) { W "检查: 会话=$sid 状态=$state 设备=$devS  -> 正常" }
             }
             $lastSid = $sid
+        } else {
+            if (-not $Quiet) { W "检查: 找不到微信/python 进程" }
         }
     } catch {
         W "循环异常: $_"
