@@ -107,11 +107,21 @@ function Do-Status {
     if ($sid) { Info ("微信所在会话: " + $sid) }
     if (Test-SessionActive) { Ok "存在活动会话（桌面在渲染）" } else { Bad "没有活动会话 —— 桌面不会渲染，微信发不出消息" }
 
-    # 计划任务
+    # 保活
     Write-Host ""
-    Write-Host "  [保活任务]"
-    $t = schtasks /query /tn $TASK_NAME 2>$null
-    if ($LASTEXITCODE -eq 0) { Ok ($TASK_NAME + " 已注册") } else { Bad ($TASK_NAME + " 未注册") }
+    Write-Host "  [保活]"
+    $daemon = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+                Where-Object { $_.CommandLine -match "keep_console_loop" })
+    if ($daemon.Count -gt 0) {
+        Ok ("守护进程在运行  (PID " + ($daemon.ProcessId -join ", ") + ")")
+    } else {
+        Bad "守护进程未运行  ->  跑 4-install-autostart.ps1 安装"
+    }
+    $lnk = Join-Path ([Environment]::GetFolderPath("Startup")) "KeepConsoleSession.lnk"
+    if (Test-Path $lnk) { Info "已设置自启动" } else { Warn "未设置自启动（重启后不会自动恢复）" }
+    # 旧计划任务（如果有就提示一下）
+    schtasks /query /tn $TASK_NAME >$null 2>&1
+    if ($LASTEXITCODE -eq 0) { Info "（另存在旧的计划任务，可以忽略；不影响使用）" }
 
     # 渲染实测
     Write-Host ""

@@ -50,9 +50,16 @@ if ($py) {
 
 # 4 计划任务
 Write-Host ""
-Write-Host "[4] 会话保活计划任务"
-$t = schtasks /query /tn "KeepConsoleSession" 2>$null
-Chk "KeepConsoleSession 已注册" ($LASTEXITCODE -eq 0) ""
+Write-Host "[4] 会话保活"
+$daemon = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -match "keep_console_loop" })
+$lnk = Join-Path ([Environment]::GetFolderPath("Startup")) "KeepConsoleSession.lnk"
+if ($daemon.Count -gt 0) {
+    Chk "守护进程在运行" $true ("PID " + ($daemon.ProcessId -join ","))
+} else {
+    Chk "守护进程在运行" $false "未运行 -> 跑 4-install-autostart.ps1"
+}
+Chk "已设置自启动" (Test-Path $lnk) $(if (Test-Path $lnk) {""} else {"-> 4-install-autostart.ps1"})
 
 # 5 微信进程
 Write-Host ""
@@ -93,5 +100,5 @@ Write-Host "=================================================="
 Write-Host ""
 Write-Host "常见对应关系:"
 Write-Host "  [3] 失败 -> 断开远程桌面了，或没装虚拟显示器  -> 跑 1-install-vdd.ps1"
-Write-Host "  [4] 失败 -> 没注册保活任务                     -> 跑 2-register-task.ps1"
+Write-Host "  [4] 失败 -> 守护没装/没跑                     -> 跑 4-install-autostart.ps1"
 Write-Host "  [6] 失败 -> 看 C:\VirtualDisplayDriver\keep_console.log"
