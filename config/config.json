@@ -1,0 +1,53 @@
+{
+  "webui": {
+    "host": "0.0.0.0",
+    "port": 10001,
+    "debug": false
+  },
+  "wechat": {
+    "enabled": true,
+    "monitor_users": [
+      {
+        "nickname": "111",
+        "user_id": "66278995"
+      },
+      {
+        "nickname": "鸿无声",
+        "user_id": "5278328"
+      },
+      {
+        "nickname": "义和团",
+        "user_id": "5248678"
+      }
+    ],
+    "check_interval": 1,
+    "auto_reply": false,
+    "window_minimize": {
+      "enabled": true,
+      "interval": 3600,
+      "restore_delay": 1
+    }
+  },
+  "onebot": {
+    "enabled": true,
+    "ws_url": "ws://127.0.0.1:7799/ws",
+    "access_token": "258",
+    "reconnect_interval": 5,
+    "heartbeat_interval": 30,
+    "self_id": "10001000"
+  },
+  "message": {
+    "max_length": 4096,
+    "enable_image": true,
+    "enable_file": true,
+    "enable_voice": false,
+    "image_cache_dir": "cache/images",
+    "file_cache_dir": "cache/files"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/app.log",
+    "max_size": "10MB",
+    "backup_count": 5
+  }
+}

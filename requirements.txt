@@ -1,0 +1,8 @@
+# 本插件实际需要的依赖
+# 说明：astrbot 框架 / psutil / pillow 等由 AstrBot 自带，无需在此声明
+wechatauto-replica>=1.2.4
+flask>=2.3.0
+flask-cors>=4.0.0
+websocket-client>=1.6.0
+requests>=2.31.0
+pywin32>=306

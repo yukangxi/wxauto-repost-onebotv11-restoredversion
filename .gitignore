@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.bak_*
+cache/
+data/
+wxauto_logs/
+wechatauto_logs/
+*.db
+*.log
+venv/
+.venv/
+.idea/
+.vscode/
