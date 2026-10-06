@@ -201,3 +201,21 @@ pnputil /remove-device "ROOT\MTTVDD\0000"
 - **`tscon` 会断开你当前的远程桌面** —— 这是正常的，会话会留在控制台继续跑
 - 驱动本体来自第三方，**本仓库不再分发**
 - 如果你从不使用远程桌面（本地一直开着），**可能不需要这套**
+
+---
+
+## ⚠️ 计划任务必须用 Administrator 跑，不能用 SYSTEM
+
+**原因**：**SYSTEM 账户无法操作交互式会话** —— `tscon` 会**静默失败**。
+
+**表现**：任务显示"上次结果 0"（成功），但断开远程桌面后机器人**照样发不出消息**。
+
+**正确写法**（`2-register-task.ps1` 已内置）：
+
+```cmd
+schtasks /create /tn "KeepConsoleSession" /f ^
+  /tr "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\VirtualDisplayDriver\keep_console.ps1" ^
+  /sc minute /mo 1 /ru %COMPUTERNAME%\%USERNAME% /rl HIGHEST /it
+```
+
+关键在 `/ru <你> /rl HIGHEST /it` —— **`/it` 表示"仅交互式"**，这样它才能操作桌面会话。

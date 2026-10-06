@@ -25,7 +25,17 @@ Write-Host "已部署: $script"
 
 # 注册任务
 $tr = "powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script`""
-schtasks /create /tn $taskName /f /tr $tr /sc minute /mo 1 /ru SYSTEM /rl HIGHEST
+
+# ★ 必须用 Administrator + /it，不能用 SYSTEM
+#   原因: SYSTEM 账户无法操作交互式会话 -> tscon 会静默失败
+#         （表现为: 断开远程桌面后机器人发不出消息）
+$who = "$env:COMPUTERNAME\$env:USERNAME"
+schtasks /create /tn $taskName /f /tr $tr /sc minute /mo 1 /ru $who /rl HIGHEST /it
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [警告] 以 $who 注册失败，回退到 SYSTEM（tscon 可能失效）"
+    schtasks /create /tn $taskName /f /tr $tr /sc minute /mo 1 /ru SYSTEM /rl HIGHEST
+}
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""

@@ -66,9 +66,23 @@ Write-Host ""
 Write-Host "[6] 发送实测（发到「文件传输助手」）"
 if ($py) {
     $code2 = "from wechatauto import WeChat`nprint(WeChat().SendMsg('自检消息', who='文件传输助手'))"
-    $r2 = python -c $code2 2>&1
-    $ok = ($LASTEXITCODE -eq 0) -and ($r2 -match "成功|success")
-    Chk "微信发送链路" $ok "$(($r2 | Select-Object -Last 1))"
+    # 用 UTF-8 拿输出，避免中文乱码误判
+    try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
+    $r2 = (python -c $code2 2>&1 | Out-String)
+
+    # 判定只看两件 ASCII 事实：
+    #   1) 有没有 'status'  —— 有说明真的拿到了 WxResponse
+    #   2) 有没有 grab failed / Traceback —— 有说明没发出去
+    $gotStatus = $r2 -match "status"
+    $hasError  = $r2 -match "grab failed|Traceback"
+    $ok = $gotStatus -and (-not $hasError)
+
+    if ($ok) { $brief = "发送成功" }
+    elseif ($r2 -match "grab failed") { $brief = "屏幕截图失败 —— 桌面没渲染（会话被断开了？跑 manage-vdd.ps1 start）" }
+    elseif ($hasError) { $brief = "运行异常" }
+    else { $brief = "没拿到返回" }
+
+    Chk "微信发送链路" $ok $brief
 } else { Write-Host "     (跳过)" }
 
 Write-Host ""
