@@ -78,9 +78,9 @@ git push -u origin main
 if errorlevel 1 (
     echo.
     echo   推送失败，常见原因:
-    echo     1) 没登录 GitHub - 会弹出登录窗口，登录后重新双击本文件
-    echo     2) 远程已有内容   - 先执行: git pull --rebase origin main
-    echo     3) 网络波动       - 再试一次
+    echo     [1] 没登录 GitHub - 会弹出登录窗口，登录后重新双击本文件
+    echo     [2] 远程已有内容   - 先执行: git pull --rebase origin main
+    echo     [3] 网络波动       - 再试一次
 )
 
 echo.
