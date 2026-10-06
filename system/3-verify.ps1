@@ -27,7 +27,10 @@ Write-Host ""
 Write-Host "[2] 显示设备"
 $disps = Get-PnpDevice -Class Display -ErrorAction SilentlyContinue
 $disps | ForEach-Object { Write-Host "     $($_.Status)  $($_.FriendlyName)" }
-$hasVdd = ($disps | Where-Object { $_.FriendlyName -match "Virtual Display|MttVDD" }).Count -gt 0
+$hasVdd = $false
+foreach ($x in $disps) {
+    if ($x.FriendlyName -match "Virtual Display|MttVDD" -or $x.InstanceId -match "MTTVDD") { $hasVdd = $true; break }
+}
 Chk "虚拟显示器已安装" $hasVdd "(不装的话断开远程桌面就会瞎)"
 
 # 3 屏幕渲染
